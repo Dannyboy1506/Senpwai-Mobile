@@ -154,9 +154,10 @@ class LibraryScreen(Screen):
                             idx = self.ep_rv.data.index(row)
                             if idx < len(self.ep_rv.data):
                                 ep_data = self.ep_rv.data[idx]
-                                self.manager.parent.switch_screen("player")
-                                player = self.manager.get_screen("player")
+                                app = self.manager.parent
+                                player = app.root.get_screen("player")
                                 player.play_file(ep_data["path"], ep_data["name"])
+                                app.root.current = "player"
                             return True
         return False
 
