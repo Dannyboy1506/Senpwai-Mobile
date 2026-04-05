@@ -58,6 +58,9 @@ class AnimeCard(ButtonBehavior, RecycleDataViewBehavior, BoxLayout):
 
 class HomeScreen(Screen):
     current_anime = None
+    _search_thread = None
+    _download_thread = None
+    _ddl_thread = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -162,6 +165,9 @@ class HomeScreen(Screen):
     def start_download(self):
         if not self.current_anime:
             return
+        if self._download_thread and self._download_thread.is_alive():
+            Clock.schedule_once(lambda dt: setattr(self.status_label, 'text', "Download already in progress"))
+            return
         try:
             ep_from = int(self.ep_from.text)
             ep_to = int(self.ep_to.text) if self.ep_to.text else ep_from
@@ -171,9 +177,16 @@ class HomeScreen(Screen):
         if ep_to < ep_from:
             self.status_label.text = "End episode must be >= start"
             return
+        if ep_from < 1:
+            self.status_label.text = "Start episode must be >= 1"
+            return
         app = self.manager.parent
         site = self.site_spinner.text
-        threading.Thread(target=lambda: self._dl(site, ep_from, ep_to, app.config.quality, app.config.sub_or_dub), daemon=True).start()
+        self.status_label.text = "Preparing downloads..."
+        self._download_thread = threading.Thread(
+            target=lambda: self._dl(site, ep_from, ep_to, app.config.quality, app.config.sub_or_dub), daemon=True
+        )
+        self._download_thread.start()
 
     def _dl(self, site, ep_from, ep_to, quality, sub_or_dub):
         try:
@@ -187,20 +200,27 @@ class HomeScreen(Screen):
 
     def _dl_pahe(self, ep_from, ep_to, quality, sub_or_dub):
         anime = self.current_anime
+        if not anime:
+            return
         anime_id = anime.get("id", "")
         app = self.manager.parent
         folder = os.path.join(app.config.download_folder, strip_title(anime.get("title", "Unknown")))
         os.makedirs(folder, exist_ok=True)
         episodes = get_pahe_episodes(anime_id)
+        if not episodes:
+            Clock.schedule_once(lambda dt: setattr(self.status_label, 'text', "No episodes found"))
+            return
         count = 0
         for ep in episodes:
             ep_num = ep.get("episode", 0)
-            if ep_num < ep_from or ep_num > ep_to:
+            if not ep_num or ep_num < ep_from or ep_num > ep_to:
                 continue
             existing = os.path.join(folder, f"{strip_title(anime.get('title', ''))} E{ep_num:02d}.mp4")
             if os.path.exists(existing):
                 continue
             session = ep.get("session", "")
+            if not session:
+                continue
             links = get_pahe_download_links(anime_id, session, quality, sub_or_dub)
             if not links:
                 continue
@@ -214,6 +234,8 @@ class HomeScreen(Screen):
 
     def _dl_gogo(self, ep_from, ep_to, quality):
         anime = self.current_anime
+        if not anime:
+            return
         anime_id = anime.get("id", "")
         app = self.manager.parent
         folder = os.path.join(app.config.download_folder, strip_title(anime.get("title", "Unknown")))
@@ -245,6 +267,9 @@ class HomeScreen(Screen):
     def get_ddl_links(self):
         if not self.current_anime:
             return
+        if self._ddl_thread and self._ddl_thread.is_alive():
+            Clock.schedule_once(lambda dt: setattr(self.status_label, 'text', "Fetching links already in progress"))
+            return
         try:
             ep_from = int(self.ep_from.text)
             ep_to = int(self.ep_to.text) if self.ep_to.text else ep_from
@@ -254,9 +279,16 @@ class HomeScreen(Screen):
         if ep_to < ep_from:
             self.status_label.text = "End episode must be >= start"
             return
+        if ep_from < 1:
+            self.status_label.text = "Start episode must be >= 1"
+            return
         app = self.manager.parent
         site = self.site_spinner.text
-        threading.Thread(target=lambda: self._get_ddl(site, ep_from, ep_to, app.config.quality, app.config.sub_or_dub), daemon=True).start()
+        self.status_label.text = "Fetching DDL links..."
+        self._ddl_thread = threading.Thread(
+            target=lambda: self._get_ddl(site, ep_from, ep_to, app.config.quality, app.config.sub_or_dub), daemon=True
+        )
+        self._ddl_thread.start()
 
     def _get_ddl(self, site, ep_from, ep_to, quality, sub_or_dub):
         try:
@@ -277,14 +309,18 @@ class HomeScreen(Screen):
 
     def _get_ddl_pahe(self, ep_from, ep_to, quality, sub_or_dub):
         anime = self.current_anime
+        if not anime:
+            return []
         anime_id = anime.get("id", "")
         episodes = get_pahe_episodes(anime_id)
         links = []
         for ep in episodes:
             ep_num = ep.get("episode", 0)
-            if ep_num < ep_from or ep_num > ep_to:
+            if not ep_num or ep_num < ep_from or ep_num > ep_to:
                 continue
             session = ep.get("session", "")
+            if not session:
+                continue
             dl_links = get_pahe_download_links(anime_id, session, quality, sub_or_dub)
             if not dl_links:
                 continue
@@ -296,6 +332,8 @@ class HomeScreen(Screen):
 
     def _get_ddl_gogo(self, ep_from, ep_to, quality):
         anime = self.current_anime
+        if not anime:
+            return []
         anime_id = anime.get("id", "")
         episodes = get_gogo_episodes(anime_id, ep_from, ep_to)
         links = []
@@ -321,7 +359,10 @@ class HomeScreen(Screen):
             row = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(6))
             row.add_widget(Label(text=link_info["title"], color=TEXT_PRIMARY,
                                font_size=dp(11), halign="left", size_hint_x=0.5))
-            row.add_widget(Label(text=link_info["url"][:40] + "...", color=TEXT_SECONDARY,
+            url_display = link_info["url"]
+            if len(url_display) > 40:
+                url_display = url_display[:40] + "..."
+            row.add_widget(Label(text=url_display, color=TEXT_SECONDARY,
                                font_size=dp(9), halign="left", size_hint_x=0.5))
 
             copy_btn = Button(text="Copy", size_hint_x=None, width=dp(55),

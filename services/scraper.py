@@ -220,25 +220,28 @@ def get_pahe_download_links(anime_id, session, quality, sub_or_dub):
 
 
 def decrypt_kwik(kwik_url):
-    resp = CLIENT.get(kwik_url, allow_redirects=True, timeout=15)
-    html = resp.text
+    try:
+        resp = CLIENT.get(kwik_url, allow_redirects=True, timeout=15)
+        html = resp.text
 
-    match = KWIK_PAGE_RE.search(html)
-    if not match:
+        match = KWIK_PAGE_RE.search(html)
+        if not match:
+            return None
+        action_url = match.group(1)
+
+        match2 = PARAM_RE.search(html)
+        if not match2:
+            resp2 = CLIENT.get(action_url, allow_redirects=True, timeout=15,
+                              headers={"Referer": kwik_url})
+            return resp2.url
+
+        va = int(match2.group(1))
+        form_data = {"_token": "", "d": va}
+        resp3 = CLIENT.post(action_url, data=form_data, timeout=15,
+                           headers={"Referer": kwik_url})
+        return resp3.url
+    except Exception:
         return None
-    action_url = match.group(1)
-
-    match2 = PARAM_RE.search(html)
-    if not match2:
-        resp2 = CLIENT.get(action_url, allow_redirects=True, timeout=15,
-                          headers={"Referer": kwik_url})
-        return resp2.url
-
-    va = int(match2.group(1))
-    form_data = {"_token": "", "d": va}
-    resp3 = CLIENT.post(action_url, data=form_data, timeout=15,
-                       headers={"Referer": kwik_url})
-    return resp3.url
 
 
 def get_gogo_episodes(anime_id, ep_from, ep_to):
@@ -297,8 +300,11 @@ def open_url_in_browser(url):
             webbrowser.open(url)
             return True
     except Exception:
-        import webbrowser
-        webbrowser.open(url)
+        try:
+            import webbrowser
+            webbrowser.open(url)
+        except Exception:
+            pass
         return True
 
 
@@ -347,6 +353,7 @@ class Download(ProgressFunction):
         file_title = f"{strip_title(self.episode_title)}{file_extension}"
         self.file_path = os.path.join(self.download_folder_path, file_title)
         ext = ".ts" if is_hls_download else file_extension
+
         temp_file_title = f"{strip_title(self.episode_title)} [Downloading]{ext}"
         self.temp_path = os.path.join(self.download_folder_path, temp_file_title)
         self.meta_path = self.temp_path + ".json"
@@ -610,7 +617,7 @@ class Download(ProgressFunction):
         return True
 
     def _download_hls(self):
-        seg_urls = cast(list[str], self.link_or_segment_urls)
+        seg_urls = cast(list, self.link_or_segment_urls)
         meta = self._load_meta() or {}
         next_seg = meta.get("next_seg_idx", 0)
 

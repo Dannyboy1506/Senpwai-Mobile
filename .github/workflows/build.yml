@@ -55,7 +55,7 @@ jobs:
           python -m venv buildozer-venv
           source buildozer-venv/bin/activate
           pip install --upgrade pip
-          pip install buildozer cython
+          pip install buildozer "cython<3.0"
 
       - name: Build APK
         run: |

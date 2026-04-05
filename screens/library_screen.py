@@ -46,7 +46,7 @@ class AnimeFolderCard(ButtonBehavior, RecycleDataViewBehavior, BoxLayout):
         self.episodes = str(data.get("episode_count", 0))
         self.size = data.get("size_str", "0MB")
         self.title_label.text = self.name
-        self.info_label.text = f"{self.episodes} episodes  •  {self.size}"
+        self.info_label.text = f"{self.episodes} episodes  \u2022  {self.size}"
 
 
 class EpisodeRow(ButtonBehavior, RecycleDataViewBehavior, BoxLayout):
@@ -65,7 +65,7 @@ class EpisodeRow(ButtonBehavior, RecycleDataViewBehavior, BoxLayout):
                              color=TEXT_PRIMARY, font_size=dp(12))
         self.add_widget(self.ep_label)
 
-        self.play_btn = Button(text="▶", size_hint_x=None, width=dp(45),
+        self.play_btn = Button(text="\u25b6", size_hint_x=None, width=dp(45),
                               background_color=SUCCESS, color=TEXT_PRIMARY, font_size=dp(14))
         self.add_widget(self.play_btn)
 
@@ -97,7 +97,7 @@ class LibraryScreen(Screen):
         self.ep_panel.disabled = True
 
         ep_header = BoxLayout(size_hint_y=None, height=dp(38))
-        self.back_btn = Button(text="← Back", size_hint_x=None, width=dp(70),
+        self.back_btn = Button(text="\u2190 Back", size_hint_x=None, width=dp(70),
                               background_color=BG_CARD, color=TEXT_PRIMARY, font_size=dp(13))
         self.back_btn.bind(on_press=lambda x: self._show_list())
         ep_header.add_widget(self.back_btn)
@@ -120,19 +120,24 @@ class LibraryScreen(Screen):
         self._refresh()
 
     def _refresh(self):
-        app = self.manager.parent
-        storage = app.storage
-        info = storage.get_storage_info()
-        self.storage_label.text = f"Storage: {storage.format_size(info['used'])} used  •  {storage.format_size(info['free'])} free"
+        if not self.manager or not self.manager.parent:
+            return
+        try:
+            app = self.manager.parent
+            storage = app.storage
+            info = storage.get_storage_info()
+            self.storage_label.text = f"Storage: {storage.format_size(info['used'])} used  \u2022  {storage.format_size(info['free'])} free"
 
-        anime_list = storage.list_anime_folders()
-        self.anime_rv.data = []
-        for anime in anime_list:
-            self.anime_rv.data.append({
-                "name": anime["name"], "episode_count": anime["episode_count"],
-                "size_str": storage.format_size(anime["total_size"]),
-                "path": anime["path"], "episodes": anime["episodes"],
-            })
+            anime_list = storage.list_anime_folders()
+            self.anime_rv.data = []
+            for anime in anime_list:
+                self.anime_rv.data.append({
+                    "name": anime["name"], "episode_count": anime["episode_count"],
+                    "size_str": storage.format_size(anime["total_size"]),
+                    "path": anime["path"], "episodes": anime["episodes"],
+                })
+        except Exception:
+            self.storage_label.text = "Error loading library"
 
     def on_touch_down(self, touch):
         if super().on_touch_down(touch):
@@ -154,12 +159,20 @@ class LibraryScreen(Screen):
                             idx = self.ep_rv.data.index(row)
                             if idx < len(self.ep_rv.data):
                                 ep_data = self.ep_rv.data[idx]
-                                app = self.manager.parent
-                                player = app.root.get_screen("player")
-                                player.play_file(ep_data["path"], ep_data["name"])
-                                app.root.current = "player"
+                                self._play_episode(ep_data)
                             return True
         return False
+
+    def _play_episode(self, ep_data):
+        if not self.manager or not self.manager.parent:
+            return
+        try:
+            app = self.manager.parent
+            player = app.root.get_screen("player")
+            player.play_file(ep_data["path"], ep_data["name"])
+            app.root.current = "player"
+        except Exception as e:
+            self.storage_label.text = f"Error: {str(e)[:60]}"
 
     def _show_episodes(self, anime_data):
         self.anime_rv.opacity = 0
@@ -168,6 +181,8 @@ class LibraryScreen(Screen):
         self.ep_panel.disabled = False
         self.ep_title_label.text = anime_data["name"]
 
+        if not self.manager or not self.manager.parent:
+            return
         app = self.manager.parent
         self.ep_rv.data = []
         for ep in anime_data.get("episodes", []):

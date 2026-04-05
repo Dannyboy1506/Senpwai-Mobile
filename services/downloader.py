@@ -109,7 +109,10 @@ class DownloadManager:
                         if task in self.active_downloads:
                             self.active_downloads.remove(task)
                         self.completed_downloads.append(task)
-                        self.app.show_notification("Download Complete", task.title)
+                        try:
+                            self.app.show_notification("Download Complete", task.title)
+                        except Exception:
+                            pass
                         self._notify("completed", task)
                     elif download.cancelled:
                         task.status = DownloadTask.STATUS_CANCELLED
@@ -117,7 +120,7 @@ class DownloadManager:
                         self._notify("cancelled", task)
                     else:
                         task.status = DownloadTask.STATUS_FAILED
-                        task.error = download._last_error
+                        task.error = download._last_error or "Unknown error"
                         if task in self.active_downloads:
                             self.active_downloads.remove(task)
                         self.failed_downloads.append(task)
@@ -129,7 +132,7 @@ class DownloadManager:
         except Exception as e:
             def _on_error():
                 task.status = DownloadTask.STATUS_FAILED
-                task.error = str(e)
+                task.error = str(e)[:100]
                 with self.lock:
                     if task in self.active_downloads:
                         self.active_downloads.remove(task)
@@ -163,6 +166,7 @@ class DownloadManager:
             task.speed = 0
             task.eta = 0
             task._speed_tracker = SpeedTracker()
+            task.downloaded = 0
             if task not in self.queue:
                 self.queue.append(task)
         self._process_queue()

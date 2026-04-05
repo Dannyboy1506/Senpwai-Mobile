@@ -12,6 +12,10 @@ from kivy.clock import Clock
 from kivy.properties import ObjectProperty, ListProperty, StringProperty
 from kivy.metrics import dp
 from kivy.utils import platform
+from kivy.config import Config
+
+Config.set('kivy', 'log_level', 'warning')
+Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
 
 from screens.home_screen import HomeScreen
 from screens.download_screen import DownloadScreen
@@ -68,7 +72,10 @@ class SenpcliConfig:
                 pass
         base = os.path.expanduser("~")
         d = os.path.join(base, ".senpwai-mobile")
-        os.makedirs(d, exist_ok=True)
+        try:
+            os.makedirs(d, exist_ok=True)
+        except Exception:
+            d = base
         return d
 
     def _load(self):
@@ -85,7 +92,7 @@ class SenpcliConfig:
             self.max_simultaneous_downloads = data.get("max_simultaneous_downloads", 2)
             self.ignore_fillers = data.get("ignore_fillers", False)
         except Exception:
-            pass
+            self._save()
 
     def _save(self):
         try:
@@ -115,7 +122,8 @@ class SenpcliApp(App):
         self.title = APP_NAME
         self.icon = "icon.png"
         Window.clearcolor = BG_PRIMARY
-        Window.size = (dp(375), dp(740))
+        if platform != "android":
+            Window.size = (dp(375), dp(740))
 
         self.config = SenpcliConfig()
         self.storage = StorageManager(self.config.download_folder)
@@ -138,7 +146,10 @@ class SenpcliApp(App):
 
     def switch_screen(self, screen_name):
         if self.root and self.root.current != screen_name:
-            self.root.current = screen_name
+            try:
+                self.root.current = screen_name
+            except Exception:
+                pass
 
     def on_config_change(self, key, value):
         setattr(self.config, key, value)

@@ -17,7 +17,6 @@ class PlayerScreen(Screen):
         super().__init__(**kwargs)
         self.layout = BoxLayout(orientation="vertical", padding=dp(15), spacing=dp(10))
 
-        # Info area
         self.layout.add_widget(Label(
             text="Video Player",
             size_hint_y=None,
@@ -37,10 +36,8 @@ class PlayerScreen(Screen):
         self.file_label.bind(size=self.file_label.setter("text_size"))
         self.layout.add_widget(self.file_label)
 
-        # Spacer
         self.layout.add_widget(Label(size_hint_y=1))
 
-        # Instructions
         self.layout.add_widget(Label(
             text="Tap an episode in the Library to play it.\n"
                  "Your device's video player will open automatically.",
@@ -51,7 +48,6 @@ class PlayerScreen(Screen):
             halign="center",
         ))
 
-        # Buttons
         btn_row = BoxLayout(size_hint_y=None, height=dp(48), spacing=dp(10))
 
         self.open_btn = Button(
@@ -82,8 +78,16 @@ class PlayerScreen(Screen):
         self._open_native_player()
 
     def _open_native_player(self):
-        if not self.current_file or not os.path.exists(self.current_file):
-            self.file_label.text = "File not found"
+        if not self.current_file:
+            self.file_label.text = "No file selected"
+            return
+
+        if not os.path.exists(self.current_file):
+            self.file_label.text = f"File not found: {os.path.basename(self.current_file)}"
+            return
+
+        if not self.current_file.lower().endswith((".mp4", ".mkv", ".avi", ".ts", ".webm", ".3gp")):
+            self.file_label.text = "Unsupported file format"
             return
 
         try:
@@ -92,18 +96,20 @@ class PlayerScreen(Screen):
                 from jnius import autoclass
                 Intent = autoclass("android.content.Intent")
                 Uri = autoclass("android.net.Uri")
+                File = autoclass("java.io.File")
                 PythonActivity = autoclass("org.kivy.android.PythonActivity")
                 activity = PythonActivity.mActivity
 
+                file_obj = File(self.current_file)
+                file_uri = Uri.fromFile(file_obj)
+
                 intent = Intent(Intent.ACTION_VIEW)
-                file_uri = Uri.parse("file:///" + self.current_file)
                 intent.setDataAndType(file_uri, "video/*")
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 activity.startActivity(intent)
             else:
-                # Desktop fallback
                 import subprocess
-                import sys
                 if sys.platform == "win32":
                     os.startfile(self.current_file)
                 elif sys.platform == "darwin":
@@ -114,7 +120,8 @@ class PlayerScreen(Screen):
             self.file_label.text = f"Error: {str(e)[:60]}"
 
     def _go_back(self):
-        self.manager.current = "library"
+        if self.manager:
+            self.manager.current = "library"
 
     def on_leave(self):
         pass

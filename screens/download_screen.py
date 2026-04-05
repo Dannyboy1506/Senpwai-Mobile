@@ -7,7 +7,7 @@ from kivy.uix.recycleview import RecycleView
 from kivy.uix.recycleview.views import RecycleDataViewBehavior
 from kivy.uix.recycleboxlayout import RecycleBoxLayout
 from kivy.uix.behaviors import ButtonBehavior
-from kivy.properties import StringProperty, NumericProperty
+from kivy.properties import StringProperty, NumericProperty, ObjectProperty
 from kivy.clock import Clock
 from kivy.metrics import dp
 
@@ -28,6 +28,7 @@ class ActionButton(ButtonBehavior, Label):
     def _on_touch(self, widget, touch):
         if self.collide_point(*touch.pos) and self._on_action:
             self._on_action()
+            return True
 
 
 class DownloadItemWidget(RecycleDataViewBehavior, BoxLayout):
@@ -77,13 +78,22 @@ class DownloadItemWidget(RecycleDataViewBehavior, BoxLayout):
         self.speed = data.get("speed", "")
         self.downloaded = data.get("downloaded", "")
         self.error = data.get("error", "")
-        self._on_action = data.get("on_action", None)
+        on_action = data.get("on_action", None)
 
         self.title_label.text = self.title
         self.status_label.text = self.status.upper()
         filled = int(self.progress / 5)
-        self.progress_bg.text = f"[{'█' * filled}{'░' * (20 - filled)}] {self.progress:.0f}%"
-        self.info_label.text = f"{self.downloaded}  {self.speed}"
+        filled = max(0, min(20, filled))
+        self.progress_bg.text = f"[{'\u2588' * filled}{'\u2591' * (20 - filled)}] {self.progress:.0f}%"
+
+        info_text = f"{self.downloaded}"
+        if self.speed:
+            info_text += f"  {self.speed}"
+        if self.status == "downloading":
+            eta = data.get("eta", "")
+            if eta:
+                info_text += f"  ETA: {eta}"
+        self.info_label.text = info_text
 
         if self.status == "completed":
             self.status_label.color = SUCCESS
@@ -94,22 +104,22 @@ class DownloadItemWidget(RecycleDataViewBehavior, BoxLayout):
             self.status_label.color = ERROR
             self.action_btn.text = "Retry"
             self.action_btn.color = WARNING
-            self.action_btn._on_action = self._on_action
+            self.action_btn._on_action = on_action
         elif self.status == "paused":
             self.status_label.color = WARNING
             self.action_btn.text = "Resume"
             self.action_btn.color = ACCENT
-            self.action_btn._on_action = self._on_action
+            self.action_btn._on_action = on_action
         elif self.status == "downloading":
             self.status_label.color = ACCENT
             self.action_btn.text = "Pause"
             self.action_btn.color = TEXT_PRIMARY
-            self.action_btn._on_action = self._on_action
+            self.action_btn._on_action = on_action
         else:
             self.status_label.color = TEXT_SECONDARY
             self.action_btn.text = "Cancel"
             self.action_btn.color = ERROR
-            self.action_btn._on_action = self._on_action
+            self.action_btn._on_action = on_action
 
 
 class DownloadScreen(Screen):
@@ -154,8 +164,13 @@ class DownloadScreen(Screen):
         app.download_manager.register_callback(lambda e, t: Clock.schedule_once(lambda dt: self._refresh()))
 
     def _refresh(self):
-        app = self.manager.parent
-        dm = app.download_manager
+        if not self.manager or not self.manager.parent:
+            return
+        try:
+            app = self.manager.parent
+            dm = app.download_manager
+        except Exception:
+            return
 
         def make_action(task, action):
             def _action():
@@ -173,6 +188,7 @@ class DownloadScreen(Screen):
                 "title": task.title, "progress": task.get_progress(),
                 "status": task.status, "speed": task.get_speed_str(),
                 "downloaded": task.get_downloaded_str(), "error": task.error,
+                "eta": task.get_eta_str() if task.status == "downloading" else "",
                 "on_action": action,
             })
 
@@ -181,7 +197,7 @@ class DownloadScreen(Screen):
             self.completed_rv.data.append({
                 "title": task.title, "progress": 100, "status": "completed",
                 "speed": "", "downloaded": task.get_downloaded_str(), "error": "",
-                "on_action": None,
+                "eta": "", "on_action": None,
             })
 
         self.failed_rv.data = []
@@ -189,5 +205,5 @@ class DownloadScreen(Screen):
             self.failed_rv.data.append({
                 "title": task.title, "progress": task.get_progress(), "status": "failed",
                 "speed": "", "downloaded": task.get_downloaded_str(), "error": task.error,
-                "on_action": make_action(task, dm.retry_download),
+                "eta": "", "on_action": make_action(task, dm.retry_download),
             })
