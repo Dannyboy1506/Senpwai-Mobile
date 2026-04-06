@@ -24,7 +24,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             python3-venv \
-            openjdk-11-jdk \
+            openjdk-17-jdk \
             build-essential \
             git \
             zip \
@@ -49,6 +49,11 @@ jobs:
             cmake \
             wget \
             curl
+
+      - name: Set Java 17
+        run: |
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+          echo "/usr/lib/jvm/java-17-openjdk-amd64/bin" >> $GITHUB_PATH
 
       - name: Install Python dependencies
         run: |
