@@ -7,7 +7,7 @@ from kivy.uix.slider import Slider
 from kivy.uix.scrollview import ScrollView
 from kivy.metrics import dp
 
-from main import BG_CARD, ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_HINT
+from constants import BG_CARD, ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_HINT
 
 
 class SettingsScreen(Screen):
@@ -84,7 +84,10 @@ class SettingsScreen(Screen):
         self.add_widget(scroll)
 
     def _save(self, key, value):
-        self.manager.parent.on_config_change(key, value)
+        try:
+            self.manager.parent.on_config_change(key, value)
+        except Exception:
+            pass
 
     def _on_sub_change(self, switch, value):
         self._save("sub_or_dub", "sub" if value else "dub")
@@ -96,13 +99,18 @@ class SettingsScreen(Screen):
         self.msd_label.text = str(int(value))
 
     def on_enter(self):
-        app = self.manager.parent
-        config = app.config
-        self.quality_spinner.text = config.quality
-        self.sub_switch.active = config.sub_or_dub == "sub"
-        self.sub_label.color = TEXT_PRIMARY if self.sub_switch.active else TEXT_HINT
-        self.dub_label.color = TEXT_HINT if self.sub_switch.active else TEXT_PRIMARY
-        self.site_spinner.text = config.site
-        self.msd_slider.value = config.max_simultaneous_downloads
-        self.filler_switch.active = config.ignore_fillers
-        self.folder_label.text = config.download_folder
+        if not self.manager or not self.manager.parent:
+            return
+        try:
+            app = self.manager.parent
+            config = app.config
+            self.quality_spinner.text = config.quality
+            self.sub_switch.active = config.sub_or_dub == "sub"
+            self.sub_label.color = TEXT_PRIMARY if self.sub_switch.active else TEXT_HINT
+            self.dub_label.color = TEXT_HINT if self.sub_switch.active else TEXT_PRIMARY
+            self.site_spinner.text = config.site
+            self.msd_slider.value = config.max_simultaneous_downloads
+            self.filler_switch.active = config.ignore_fillers
+            self.folder_label.text = config.download_folder
+        except Exception:
+            pass

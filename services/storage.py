@@ -20,7 +20,14 @@ class StorageManager:
             total, used, free = shutil.disk_usage(self.download_folder)
             return {"total": total, "used": used, "free": free}
         except Exception:
-            return {"total": 0, "used": 0, "free": 0}
+            try:
+                st = os.statvfs(self.download_folder)
+                total = st.f_blocks * st.f_frsize
+                free = st.f_bfree * st.f_frsize
+                used = total - free
+                return {"total": total, "used": used, "free": free}
+            except Exception:
+                return {"total": 0, "used": 0, "free": 0}
 
     def list_anime_folders(self):
         if not os.path.exists(self.download_folder):

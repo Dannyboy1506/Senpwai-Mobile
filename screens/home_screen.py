@@ -15,14 +15,31 @@ from kivy.uix.popup import Popup
 from kivy.properties import StringProperty
 from kivy.clock import Clock
 from kivy.metrics import dp
-from kivy.core.window import Clipboard
 
-from services.scraper import (
-    search_pahe, search_gogo, get_pahe_episodes, get_pahe_download_links,
-    decrypt_kwik, get_gogo_episodes, get_gogo_download_links,
-    strip_title, IBYTES_TO_MBS_DIVISOR, CLIENT, open_url_in_browser,
-)
-from main import BG_CARD, BG_INPUT, ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_HINT, SUCCESS, ERROR
+try:
+    from kivy.core.window import Clipboard
+    HAS_CLIPBOARD = True
+except Exception:
+    HAS_CLIPBOARD = False
+
+try:
+    from services.scraper import (
+        search_pahe, search_gogo, get_pahe_episodes, get_pahe_download_links,
+        decrypt_kwik, get_gogo_episodes, get_gogo_download_links,
+        strip_title, IBYTES_TO_MBS_DIVISOR, CLIENT, open_url_in_browser,
+    )
+    SCRAPER_AVAILABLE = True
+except Exception as e:
+    print(f"Warning: Could not import scraper: {e}")
+    SCRAPER_AVAILABLE = False
+    search_pahe = search_gogo = get_pahe_episodes = get_pahe_download_links = None
+    decrypt_kwik = get_gogo_episodes = get_gogo_download_links = None
+    strip_title = None
+    IBYTES_TO_MBS_DIVISOR = 1024 * 1024
+    CLIENT = None
+    open_url_in_browser = None
+
+from constants import BG_CARD, BG_INPUT, ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_HINT, SUCCESS, ERROR
 
 
 class AnimeCard(ButtonBehavior, RecycleDataViewBehavior, BoxLayout):
@@ -130,6 +147,9 @@ class HomeScreen(Screen):
         self.add_widget(self.layout)
 
     def do_search(self):
+        if not SCRAPER_AVAILABLE:
+            self.status_label.text = "Search unavailable"
+            return
         query = self.search_input.text.strip()
         if not query:
             return
@@ -385,5 +405,9 @@ class HomeScreen(Screen):
         popup.open()
 
     def _copy_link(self, url):
-        Clipboard.copy(url)
-        self.status_label.text = "Link copied to clipboard"
+        try:
+            if HAS_CLIPBOARD:
+                Clipboard.copy(url)
+                self.status_label.text = "Link copied to clipboard"
+        except Exception:
+            self.status_label.text = "Could not copy link"

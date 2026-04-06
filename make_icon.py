@@ -37,5 +37,10 @@ for px, py in [(140, 130), (380, 140), (130, 370), (390, 380), (256, 80)]:
     draw.ellipse([px-4, py-4, px+4, py+4], fill=(180, 140, 255, 200))
     draw.ellipse([px-2, py-2, px+2, py+2], fill=(255, 255, 255, 255))
 
-img.save(r'C:\Users\TheBoys\Desktop\senpwai-mobile\icon.png', 'PNG')
-print('Icon created successfully')
+# Only run on desktop - skip on Android
+import sys
+if 'android' not in sys.platform.lower():
+    img.save('icon.png', 'PNG')
+    print('Icon created successfully')
+else:
+    print('Skipping icon generation on Android')

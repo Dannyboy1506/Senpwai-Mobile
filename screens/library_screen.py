@@ -10,7 +10,7 @@ from kivy.properties import StringProperty
 from kivy.clock import Clock
 from kivy.metrics import dp
 
-from main import BG_CARD, ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, SUCCESS, ERROR
+from constants import BG_CARD, ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, SUCCESS, ERROR
 
 
 class AnimeFolderCard(ButtonBehavior, RecycleDataViewBehavior, BoxLayout):

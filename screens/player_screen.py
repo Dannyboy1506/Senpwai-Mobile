@@ -1,4 +1,5 @@
 import os
+import sys
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
@@ -6,7 +7,7 @@ from kivy.uix.button import Button
 from kivy.properties import StringProperty
 from kivy.metrics import dp
 
-from main import BG_CARD, ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, SUCCESS
+from constants import BG_CARD, ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, SUCCESS
 
 
 class PlayerScreen(Screen):
