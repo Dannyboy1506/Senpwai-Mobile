@@ -84,7 +84,9 @@ class DownloadItemWidget(RecycleDataViewBehavior, BoxLayout):
         self.status_label.text = self.status.upper()
         filled = int(self.progress / 5)
         filled = max(0, min(20, filled))
-        self.progress_bg.text = f"[{'\u2588' * filled}{'\u2591' * (20 - filled)}] {self.progress:.0f}%"
+        filled_char = '\u2588'
+        empty_char = '\u2591'
+        self.progress_bg.text = f"[{filled_char * filled}{empty_char * (20 - filled)}] {self.progress:.0f}%"
 
         info_text = f"{self.downloaded}"
         if self.speed:
