@@ -3,6 +3,7 @@ import re
 import threading
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
@@ -39,7 +40,7 @@ except Exception as e:
     CLIENT = None
     open_url_in_browser = None
 
-from constants import BG_CARD, BG_INPUT, ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_HINT, SUCCESS, ERROR
+from constants import BG_CARD, BG_INPUT, ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_HINT, SUCCESS, ERROR, BG_PRIMARY
 
 
 class AnimeCard(ButtonBehavior, RecycleDataViewBehavior, BoxLayout):
@@ -51,26 +52,40 @@ class AnimeCard(ButtonBehavior, RecycleDataViewBehavior, BoxLayout):
         super().__init__(**kwargs)
         self.orientation = "horizontal"
         self.size_hint_y = None
-        self.height = dp(70)
-        self.padding = [dp(15), dp(10)]
-        self.spacing = dp(10)
+        self.height = dp(80)
+        self.padding = [dp(16), dp(12)]
+        self.spacing = dp(12)
+        self.background_color = BG_CARD + [1]
+        self.radius = [dp(8)]
 
+        self.poster = Label(text="", size_hint_x=None, width=dp(50),
+                           halign="center", valign="middle")
+        self.poster.bind(size=self.poster.setter("text_size"))
+        self.add_widget(self.poster)
+
+        info = BoxLayout(orientation="vertical", size_hint_x=1)
         self.title_label = Label(text="", halign="left", valign="middle",
-                                color=TEXT_PRIMARY, font_size=dp(14))
+                                color=TEXT_PRIMARY, font_size=dp(14),
+                                shorten=True, shorten_from="right")
         self.title_label.bind(size=self.title_label.setter("text_size"))
-        self.add_widget(self.title_label)
+        info.add_widget(self.title_label)
 
-        self.info_label = Label(text="", halign="right", valign="middle",
-                               color=TEXT_SECONDARY, font_size=dp(11), size_hint_x=None, width=dp(80))
+        self.info_label = Label(text="", halign="left", valign="middle",
+                               color=TEXT_SECONDARY, font_size=dp(11))
         self.info_label.bind(size=self.info_label.setter("text_size"))
-        self.add_widget(self.info_label)
+        info.add_widget(self.info_label)
+        self.add_widget(info)
+
+        self.arrow = Label(text=">", color=TEXT_HINT, size_hint_x=None, width=dp(20),
+                          font_size=dp(18))
+        self.add_widget(self.arrow)
 
     def refresh_view_attrs(self, rv, index, data):
         self.title = data.get("title", "")
         self.episodes = str(data.get("episodes", "?"))
         self.year = str(data.get("year", ""))
         self.title_label.text = self.title
-        self.info_label.text = f"{self.episodes} eps\n{self.year}"
+        self.info_label.text = f"{self.episodes} episodes  \u2022  {self.year}"
 
 
 class HomeScreen(Screen):
@@ -81,85 +96,110 @@ class HomeScreen(Screen):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.layout = BoxLayout(orientation="vertical", padding=dp(12), spacing=dp(10))
+        self.layout = BoxLayout(orientation="vertical", padding=0, spacing=0)
 
-        nav_row = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(8))
-        nav_row.add_widget(Label(text="Senpcli", color=TEXT_PRIMARY, font_size=dp(18), size_hint_x=1))
-        downloads_btn = Button(text="Downloads", size_hint_x=None, width=dp(90),
-                              background_color=BG_CARD, color=TEXT_PRIMARY, font_size=dp(11))
-        downloads_btn.bind(on_press=lambda x: self._go_to("downloads"))
-        nav_row.add_widget(downloads_btn)
-        library_btn = Button(text="Library", size_hint_x=None, width=dp(80),
-                            background_color=BG_CARD, color=TEXT_PRIMARY, font_size=dp(11))
-        library_btn.bind(on_press=lambda x: self._go_to("library"))
-        nav_row.add_widget(library_btn)
-        settings_btn = Button(text="Settings", size_hint_x=None, width=dp(85),
-                              background_color=BG_CARD, color=TEXT_PRIMARY, font_size=dp(11))
-        settings_btn.bind(on_press=lambda x: self._go_to("settings"))
-        nav_row.add_widget(settings_btn)
-        self.layout.add_widget(nav_row)
+        header = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(56),
+                         padding=[dp(16), dp(8)], spacing=dp(12))
+        header.add_widget(Label(text="Senpcli", color=TEXT_PRIMARY, font_size=dp(20),
+                              size_hint_x=1, halign="left"))
+        
+        nav_btns = BoxLayout(size_hint_x=None, width=dp(200), spacing=dp(4))
+        
+        self.home_btn = Button(text="Home", size_hint_x=1, height=dp(36),
+                              background_color=ACCENT, color=TEXT_PRIMARY, font_size=dp(11),
+                              background_normal="", background_down="")
+        self.dl_btn = Button(text="Downloads", size_hint_x=1, height=dp(36),
+                           background_color=BG_CARD, color=TEXT_PRIMARY, font_size=dp(11),
+                           background_normal="", background_down="")
+        self.dl_btn.bind(on_press=lambda x: self._go_to("downloads"))
+        self.lib_btn = Button(text="Library", size_hint_x=1, height=dp(36),
+                            background_color=BG_CARD, color=TEXT_PRIMARY, font_size=dp(11),
+                            background_normal="", background_down="")
+        self.lib_btn.bind(on_press=lambda x: self._go_to("library"))
+        self.set_btn = Button(text="Settings", size_hint_x=1, height=dp(36),
+                            background_color=BG_CARD, color=TEXT_PRIMARY, font_size=dp(11),
+                            background_normal="", background_down="")
+        self.set_btn.bind(on_press=lambda x: self._go_to("settings"))
+        
+        nav_btns.add_widget(self.dl_btn)
+        nav_btns.add_widget(self.lib_btn)
+        nav_btns.add_widget(self.set_btn)
+        header.add_widget(nav_btns)
+        self.layout.add_widget(header)
 
+        search_container = BoxLayout(orientation="vertical", size_hint_y=None,
+                                   padding=[dp(16), dp(12)], spacing=dp(12),
+                                   background_color=BG_PRIMARY + [1])
+        
         search_row = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(8))
         self.site_spinner = Spinner(text="pahe", values=["pahe", "gogo"],
-                                    size_hint_x=None, width=dp(75),
-                                    background_color=BG_CARD, color=TEXT_PRIMARY, font_size=dp(13))
+                                    size_hint_x=None, width=dp(80),
+                                    background_color=BG_CARD, color=TEXT_PRIMARY, font_size=dp(13),
+                                    option_cls="SpinnerOption")
         self.search_input = TextInput(hint_text="Search anime...", multiline=False,
                                       background_color=BG_INPUT, foreground_color=TEXT_PRIMARY,
-                                      cursor_color=TEXT_PRIMARY, font_size=dp(14),
-                                      padding=[dp(12), dp(10)])
+                                      cursor_color=TEXT_PRIMARY, font_size=dp(15),
+                                      padding=[dp(14), dp(10)])
         self.search_input.bind(on_text_validate=lambda x: self.do_search())
-        search_btn = Button(text="Search", size_hint_x=None, width=dp(80),
-                           background_color=ACCENT, color=TEXT_PRIMARY, font_size=dp(13))
+        search_btn = Button(text="Search", size_hint_x=None, width=dp(90),
+                           background_color=ACCENT, color=TEXT_PRIMARY, font_size=dp(14),
+                           background_normal="", background_down="")
         search_btn.bind(on_press=lambda x: self.do_search())
         search_row.add_widget(self.site_spinner)
         search_row.add_widget(self.search_input)
         search_row.add_widget(search_btn)
+        search_container.add_widget(search_row)
 
         self.status_label = Label(text="Search for an anime to get started",
-                                  color=TEXT_HINT, font_size=dp(14), size_hint_y=None, height=dp(30))
+                                  color=TEXT_HINT, font_size=dp(13), size_hint_y=None, height=dp(24),
+                                  halign="left")
+        self.status_label.bind(size=self.status_label.setter("text_size"))
+        search_container.add_widget(self.status_label)
+        self.layout.add_widget(search_container)
 
         self.results_rv = RecycleView()
         self.results_rv.add_widget(RecycleBoxLayout(
-            default_size=(None, dp(70)), default_size_hint=(1, None),
-            size_hint_y=None, orientation="vertical",
+            default_size=(None, dp(80)), default_size_hint=(1, None),
+            size_hint_y=None, orientation="vertical", padding=dp(16), spacing=dp(8)
         ))
         self.results_rv.bind(minimum_height=self.results_rv.setter("height"))
+        self.layout.add_widget(self.results_rv)
 
-        self.ep_area = BoxLayout(orientation="vertical", spacing=dp(8))
-        self.ep_area.add_widget(Label(text="Episode Selection", size_hint_y=None, height=dp(25),
-                                      color=TEXT_SECONDARY, font_size=dp(13)))
-        ep_row = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(8))
-        ep_row.add_widget(Label(text="From:", color=TEXT_SECONDARY, size_hint_x=None, width=dp(45), font_size=dp(13)))
-        self.ep_from = TextInput(text="1", multiline=False, size_hint_x=None, width=dp(55),
+        self.ep_area = BoxLayout(orientation="vertical", padding=dp(16), spacing=dp(12),
+                               size_hint_y=None, background_color=BG_PRIMARY + [1])
+        self.ep_area.add_widget(Label(text="Episode Selection", size_hint_y=None, height=dp(30),
+                                      color=TEXT_PRIMARY, font_size=dp(16), halign="left"))
+        
+        ep_row = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(16))
+        ep_row.add_widget(Label(text="From:", color=TEXT_SECONDARY, size_hint_x=None, width=dp(50), font_size=dp(13)))
+        self.ep_from = TextInput(text="1", multiline=False, size_hint_x=1,
                                 background_color=BG_INPUT, foreground_color=TEXT_PRIMARY,
-                                font_size=dp(14), padding=[dp(8), dp(8)])
+                                font_size=dp(14), padding=[dp(12), dp(8)], halign="center")
         ep_row.add_widget(self.ep_from)
         ep_row.add_widget(Label(text="To:", color=TEXT_SECONDARY, size_hint_x=None, width=dp(35), font_size=dp(13)))
-        self.ep_to = TextInput(text="", multiline=False, size_hint_x=None, width=dp(55),
+        self.ep_to = TextInput(text="", multiline=False, size_hint_x=1,
                               background_color=BG_INPUT, foreground_color=TEXT_PRIMARY,
-                              font_size=dp(14), padding=[dp(8), dp(8)])
+                              font_size=dp(14), padding=[dp(12), dp(8)], halign="center")
         ep_row.add_widget(self.ep_to)
         self.ep_area.add_widget(ep_row)
 
-        self.dl_btn = Button(text="Download All", size_hint_y=None, height=dp(48),
-                            background_color=SUCCESS, color=TEXT_PRIMARY, font_size=dp(14))
+        btn_row = BoxLayout(size_hint_y=None, height=dp(48), spacing=dp(12))
+        self.dl_btn = Button(text="Download All", size_hint_x=1,
+                            background_color=SUCCESS, color=TEXT_PRIMARY, font_size=dp(14),
+                            background_normal="", background_down="")
         self.dl_btn.bind(on_press=lambda x: self.start_download())
-
-        self.ddl_btn = Button(text="Get DDL Links", size_hint_y=None, height=dp(48),
-                             background_color=ACCENT, color=TEXT_PRIMARY, font_size=dp(14))
+        self.ddl_btn = Button(text="Get Links", size_hint_x=1,
+                             background_color=ACCENT, color=TEXT_PRIMARY, font_size=dp(14),
+                             background_normal="", background_down="")
         self.ddl_btn.bind(on_press=lambda x: self.get_ddl_links())
-
-        btn_row = BoxLayout(size_hint_y=None, height=dp(48), spacing=dp(8))
         btn_row.add_widget(self.dl_btn)
         btn_row.add_widget(self.ddl_btn)
         self.ep_area.add_widget(btn_row)
+        
         self.ep_area.opacity = 0
         self.ep_area.disabled = True
-
-        self.layout.add_widget(search_row)
-        self.layout.add_widget(self.status_label)
-        self.layout.add_widget(self.results_rv)
         self.layout.add_widget(self.ep_area)
+        
         self.add_widget(self.layout)
 
     def _go_to(self, screen_name):
@@ -201,6 +241,9 @@ class HomeScreen(Screen):
             self.ep_to.text = eps
         self.ep_area.opacity = 1
         self.ep_area.disabled = False
+        Clock.schedule_once(lambda dt: 
+            setattr(self.ep_area, 'opacity', 1) or 
+            setattr(self.ep_area, 'disabled', False))
 
     def start_download(self):
         if not self.current_anime:
@@ -214,11 +257,8 @@ class HomeScreen(Screen):
         except ValueError:
             self.status_label.text = "Invalid episode numbers"
             return
-        if ep_to < ep_from:
-            self.status_label.text = "End episode must be >= start"
-            return
-        if ep_from < 1:
-            self.status_label.text = "Start episode must be >= 1"
+        if ep_to < ep_from or ep_from < 1:
+            self.status_label.text = "Invalid episode range"
             return
         app = self.manager.parent
         site = self.site_spinner.text
@@ -307,20 +347,14 @@ class HomeScreen(Screen):
     def get_ddl_links(self):
         if not self.current_anime:
             return
-        if self._ddl_thread and self._ddl_thread.is_alive():
-            Clock.schedule_once(lambda dt: setattr(self.status_label, 'text', "Fetching links already in progress"))
-            return
         try:
             ep_from = int(self.ep_from.text)
             ep_to = int(self.ep_to.text) if self.ep_to.text else ep_from
         except ValueError:
             self.status_label.text = "Invalid episode numbers"
             return
-        if ep_to < ep_from:
-            self.status_label.text = "End episode must be >= start"
-            return
-        if ep_from < 1:
-            self.status_label.text = "Start episode must be >= 1"
+        if ep_to < ep_from or ep_from < 1:
+            self.status_label.text = "Invalid episode range"
             return
         app = self.manager.parent
         site = self.site_spinner.text
@@ -387,31 +421,36 @@ class HomeScreen(Screen):
         return links
 
     def _show_ddl_popup(self, links):
-        content = BoxLayout(orientation="vertical", padding=dp(10), spacing=dp(8))
+        content = BoxLayout(orientation="vertical", padding=dp(16), spacing=dp(12))
         content.add_widget(Label(text=f"Found {len(links)} DDL links", size_hint_y=None, height=dp(30),
-                                color=TEXT_PRIMARY, font_size=dp(14)))
+                                color=TEXT_PRIMARY, font_size=dp(15)))
 
         scroll = RecycleView()
-        scroll_layout = BoxLayout(orientation="vertical", size_hint_y=None, spacing=dp(6))
+        scroll_layout = BoxLayout(orientation="vertical", size_hint_y=None, spacing=dp(8))
         scroll_layout.bind(minimum_height=scroll_layout.setter("height"))
 
         for link_info in links:
-            row = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(6))
-            row.add_widget(Label(text=link_info["title"], color=TEXT_PRIMARY,
-                               font_size=dp(11), halign="left", size_hint_x=0.5))
-            url_display = link_info["url"]
-            if len(url_display) > 40:
-                url_display = url_display[:40] + "..."
-            row.add_widget(Label(text=url_display, color=TEXT_SECONDARY,
-                               font_size=dp(9), halign="left", size_hint_x=0.5))
+            row = BoxLayout(size_hint_y=None, height=dp(60), spacing=dp(8),
+                          padding=[dp(8), dp(4)], background_color=BG_CARD + [1], radius=[dp(6)])
+            info = BoxLayout(orientation="vertical", size_hint_x=1)
+            info.add_widget(Label(text=link_info["title"], color=TEXT_PRIMARY,
+                                 font_size=dp(12), halign="left", shorten=True))
+            url_text = link_info["url"]
+            if len(url_text) > 50:
+                url_text = url_text[:50] + "..."
+            info.add_widget(Label(text=url_text, color=TEXT_SECONDARY,
+                                font_size=dp(10), halign="left", shorten=True))
+            row.add_widget(info)
 
-            copy_btn = Button(text="Copy", size_hint_x=None, width=dp(55),
-                            background_color=BG_CARD, color=TEXT_PRIMARY, font_size=dp(10))
+            copy_btn = Button(text="Copy", size_hint_x=None, width=dp(70),
+                            background_color=BG_INPUT, color=TEXT_PRIMARY, font_size=dp(11),
+                            background_normal="", background_down="")
             copy_btn.bind(on_press=lambda x, u=link_info["url"]: self._copy_link(u))
             row.add_widget(copy_btn)
 
-            open_btn = Button(text="Open", size_hint_x=None, width=dp(55),
-                            background_color=ACCENT, color=TEXT_PRIMARY, font_size=dp(10))
+            open_btn = Button(text="Open", size_hint_x=None, width=dp(70),
+                            background_color=ACCENT, color=TEXT_PRIMARY, font_size=dp(11),
+                            background_normal="", background_down="")
             open_btn.bind(on_press=lambda x, u=link_info["url"]: open_url_in_browser(u))
             row.add_widget(open_btn)
 
@@ -420,12 +459,14 @@ class HomeScreen(Screen):
         scroll.add_widget(scroll_layout)
         content.add_widget(scroll)
 
-        close_btn = Button(text="Close", size_hint_y=None, height=dp(40),
-                          background_color=BG_CARD, color=TEXT_PRIMARY)
+        close_btn = Button(text="Close", size_hint_y=None, height=dp(48),
+                          background_color=BG_CARD, color=TEXT_PRIMARY, font_size=dp(14),
+                          background_normal="", background_down="")
         content.add_widget(close_btn)
 
         popup = Popup(title="Direct Download Links", content=content,
-                     size_hint=(0.95, 0.8), background_color=[0.12, 0.12, 0.16, 1])
+                     size_hint=(0.95, 0.85), background_color=BG_PRIMARY + [1],
+                     separator_color=ACCENT)
         close_btn.bind(on_press=popup.dismiss)
         popup.open()
 
