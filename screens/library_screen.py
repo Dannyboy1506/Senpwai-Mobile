@@ -80,6 +80,14 @@ class LibraryScreen(Screen):
         super().__init__(**kwargs)
         self.layout = BoxLayout(orientation="vertical", padding=dp(12), spacing=dp(8))
 
+        nav_row = BoxLayout(size_hint_y=None, height=dp(40))
+        nav_row.add_widget(Label(text="Library", color=TEXT_PRIMARY, font_size=dp(16), size_hint_x=1))
+        settings_btn = Button(text="Settings", size_hint_x=None, width=dp(85),
+                             background_color=BG_CARD, color=TEXT_PRIMARY, font_size=dp(11))
+        settings_btn.bind(on_press=lambda x: self._go_to("settings"))
+        nav_row.add_widget(settings_btn)
+        self.layout.add_widget(nav_row)
+
         self.storage_label = Label(text="", size_hint_y=None, height=dp(28),
                                    color=TEXT_SECONDARY, font_size=dp(11))
         self.layout.add_widget(self.storage_label)
@@ -118,6 +126,10 @@ class LibraryScreen(Screen):
 
     def on_enter(self):
         self._refresh()
+
+    def _go_to(self, screen_name):
+        if self.manager:
+            self.manager.current = screen_name
 
     def _refresh(self):
         if not self.manager or not self.manager.parent:

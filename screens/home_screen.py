@@ -83,6 +83,22 @@ class HomeScreen(Screen):
         super().__init__(**kwargs)
         self.layout = BoxLayout(orientation="vertical", padding=dp(12), spacing=dp(10))
 
+        nav_row = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(8))
+        nav_row.add_widget(Label(text="Senpcli", color=TEXT_PRIMARY, font_size=dp(18), size_hint_x=1))
+        downloads_btn = Button(text="Downloads", size_hint_x=None, width=dp(90),
+                              background_color=BG_CARD, color=TEXT_PRIMARY, font_size=dp(11))
+        downloads_btn.bind(on_press=lambda x: self._go_to("downloads"))
+        nav_row.add_widget(downloads_btn)
+        library_btn = Button(text="Library", size_hint_x=None, width=dp(80),
+                            background_color=BG_CARD, color=TEXT_PRIMARY, font_size=dp(11))
+        library_btn.bind(on_press=lambda x: self._go_to("library"))
+        nav_row.add_widget(library_btn)
+        settings_btn = Button(text="Settings", size_hint_x=None, width=dp(85),
+                              background_color=BG_CARD, color=TEXT_PRIMARY, font_size=dp(11))
+        settings_btn.bind(on_press=lambda x: self._go_to("settings"))
+        nav_row.add_widget(settings_btn)
+        self.layout.add_widget(nav_row)
+
         search_row = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(8))
         self.site_spinner = Spinner(text="pahe", values=["pahe", "gogo"],
                                     size_hint_x=None, width=dp(75),
@@ -145,6 +161,10 @@ class HomeScreen(Screen):
         self.layout.add_widget(self.results_rv)
         self.layout.add_widget(self.ep_area)
         self.add_widget(self.layout)
+
+    def _go_to(self, screen_name):
+        if self.manager:
+            self.manager.current = screen_name
 
     def do_search(self):
         if not SCRAPER_AVAILABLE:
@@ -214,7 +234,7 @@ class HomeScreen(Screen):
                 self._dl_pahe(ep_from, ep_to, quality, sub_or_dub)
             else:
                 self._dl_gogo(ep_from, ep_to, quality)
-            Clock.schedule_once(lambda dt: self.manager.parent.switch_screen("downloads"))
+            Clock.schedule_once(lambda dt: self._go_to("downloads"))
         except Exception as e:
             Clock.schedule_once(lambda dt: setattr(self.status_label, 'text', f"Error: {str(e)[:80]}"))
 
@@ -400,8 +420,13 @@ class HomeScreen(Screen):
         scroll.add_widget(scroll_layout)
         content.add_widget(scroll)
 
+        close_btn = Button(text="Close", size_hint_y=None, height=dp(40),
+                          background_color=BG_CARD, color=TEXT_PRIMARY)
+        content.add_widget(close_btn)
+
         popup = Popup(title="Direct Download Links", content=content,
                      size_hint=(0.95, 0.8), background_color=[0.12, 0.12, 0.16, 1])
+        close_btn.bind(on_press=popup.dismiss)
         popup.open()
 
     def _copy_link(self, url):

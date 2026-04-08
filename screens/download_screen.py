@@ -127,7 +127,15 @@ class DownloadItemWidget(RecycleDataViewBehavior, BoxLayout):
 class DownloadScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.layout = BoxLayout(orientation="vertical", padding=dp(10), spacing=dp(8))
+        layout = BoxLayout(orientation="vertical", padding=dp(10), spacing=dp(8))
+
+        nav_row = BoxLayout(size_hint_y=None, height=dp(40))
+        self.back_btn = Button(text="← Back", size_hint_x=None, width=dp(80),
+                              background_color=BG_CARD, color=TEXT_PRIMARY, font_size=dp(13))
+        self.back_btn.bind(on_press=lambda x: self._go_back())
+        nav_row.add_widget(self.back_btn)
+        nav_row.add_widget(Label(text="Downloads", color=TEXT_PRIMARY, font_size=dp(16)))
+        layout.add_widget(nav_row)
 
         self.panel = TabbedPanel(do_default_tab=False)
         self.panel.tab_width = dp(100)
@@ -150,6 +158,10 @@ class DownloadScreen(Screen):
         self.panel.add_widget(self.failed_tab)
         self.layout.add_widget(self.panel)
         self.add_widget(self.layout)
+
+    def _go_back(self):
+        if self.manager:
+            self.manager.current = "home"
 
     def _make_rv(self):
         rv = RecycleView()
